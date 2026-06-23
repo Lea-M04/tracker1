@@ -40,10 +40,7 @@ class CommentController extends Controller
     {
         $this->authorize('view', $issue);
 
-        $comment = $issue->comments()->create([
-            'author_name' => $request->user()->name,
-            'body' => $request->validated('body'),
-        ]);
+        $comment = $issue->comments()->create($request->validated());
 
         return response()->json([
             'message' => 'Comment created successfully.',

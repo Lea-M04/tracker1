@@ -28,6 +28,8 @@ class StoreIssueRequest extends FormRequest
             'status' => ['required', 'in:open,in_progress,closed'],
             'priority' => ['required', 'in:low,medium,high'],
             'due_date' => ['nullable', 'date'],
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['exists:tags,id'],
         ];
     }
 }

@@ -50,12 +50,16 @@
                                         <td>
                                             <div class="d-flex justify-content-end gap-2">
                                                 <a href="{{ route('projects.show', $project) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                                <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                                <form action="{{ route('projects.destroy', $project) }}" method="POST" onsubmit="return confirm('Delete this project? This will also delete its issues.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                                </form>
+                                                @can('update', $project)
+                                                    <a href="{{ route('projects.edit', $project) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                                @endcan
+                                                @can('delete', $project)
+                                                    <form action="{{ route('projects.destroy', $project) }}" method="POST" onsubmit="return confirm('Delete this project? This will also delete its issues.');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                    </form>
+                                                @endcan
                                             </div>
                                         </td>
                                     </tr>

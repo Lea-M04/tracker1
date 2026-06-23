@@ -17,8 +17,10 @@ class ProjectController extends Controller
 
     public function index(): View
     {
-        $projects = auth()->user()
-            ->projects()
+        $this->authorize('viewAny', Project::class);
+
+        $projects = Project::query()
+            ->with('user')
             ->withCount('issues')
             ->latest()
             ->paginate(10);
@@ -28,6 +30,8 @@ class ProjectController extends Controller
 
     public function create(): View
     {
+        $this->authorize('create', Project::class);
+
         return view('projects.create');
     }
 
@@ -44,7 +48,7 @@ class ProjectController extends Controller
 
     public function show(Project $project): View
     {
-        $this->authorizeProjectOwner($project);
+        $this->authorize('view', $project);
 
         $project->load([
             'user',
@@ -58,14 +62,14 @@ class ProjectController extends Controller
 
     public function edit(Project $project): View
     {
-        $this->authorizeProjectOwner($project);
+        $this->authorize('update', $project);
 
         return view('projects.edit', compact('project'));
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
-        $this->authorizeProjectOwner($project);
+        $this->authorize('update', $project);
 
         $project->update($request->validated());
 
@@ -76,7 +80,7 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): RedirectResponse
     {
-        $this->authorizeProjectOwner($project);
+        $this->authorize('delete', $project);
 
         $project->delete();
 
@@ -85,8 +89,4 @@ class ProjectController extends Controller
             ->with('success', 'Project deleted successfully.');
     }
 
-    private function authorizeProjectOwner(Project $project): void
-    {
-        abort_unless($project->user_id === auth()->id(), 403);
-    }
 }

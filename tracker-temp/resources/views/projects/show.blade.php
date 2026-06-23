@@ -6,7 +6,9 @@
                 <p class="text-muted mb-0">Project details and related issues.</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('projects.edit', $project) }}" class="btn btn-outline-secondary">Edit</a>
+                @can('update', $project)
+                    <a href="{{ route('projects.edit', $project) }}" class="btn btn-outline-secondary">Edit</a>
+                @endcan
                 <a href="{{ route('projects.index') }}" class="btn btn-primary">Projects</a>
             </div>
         </div>

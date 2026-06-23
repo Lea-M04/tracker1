@@ -41,22 +41,34 @@
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h2 class="h5 mb-3">Comments</h2>
-                            <div class="alert alert-light border mb-0">
-                                Comments section placeholder. AJAX loading and comment creation will be added here.
-                            </div>
-                            @if ($issue->comments->isNotEmpty())
-                                <div class="list-group list-group-flush mt-3">
-                                    @foreach ($issue->comments as $comment)
-                                        <div class="list-group-item px-0">
-                                            <div class="d-flex justify-content-between gap-3">
-                                                <strong>{{ $comment->author_name }}</strong>
-                                                <span class="small text-muted">{{ $comment->created_at->diffForHumans() }}</span>
-                                            </div>
-                                            <p class="mb-0 mt-1">{{ $comment->body }}</p>
-                                        </div>
-                                    @endforeach
+
+                            <div id="comment-alert" class="alert d-none" role="alert"></div>
+
+                            <form id="comment-form" class="mb-4">
+                                <div class="row g-3">
+                                    <div class="col-md-5">
+                                        <label for="author_name" class="form-label">Author Name</label>
+                                        <input type="text" name="author_name" id="author_name" class="form-control" value="{{ auth()->user()->name }}" required>
+                                        <div id="author-name-error" class="text-danger small mt-1"></div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label for="body" class="form-label">Comment</label>
+                                        <textarea name="body" id="body" rows="3" class="form-control" required></textarea>
+                                        <div id="body-error" class="text-danger small mt-1"></div>
+                                    </div>
+                                    <div class="col-12 d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary">Add Comment</button>
+                                    </div>
                                 </div>
-                            @endif
+                            </form>
+
+                            <div id="comments-list" class="list-group list-group-flush"></div>
+
+                            <div class="d-flex justify-content-between align-items-center gap-3 mt-3">
+                                <button type="button" id="comments-prev" class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+                                <span id="comments-page-info" class="small text-muted"></span>
+                                <button type="button" id="comments-next" class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -125,6 +137,20 @@
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             const attachUrl = @json(route('issues.tags.attach', $issue));
             const detachUrlTemplate = @json(route('issues.tags.detach', ['issue' => $issue, 'tag' => '__TAG_ID__']));
+            const commentsUrl = @json(route('issues.comments.index', $issue));
+            const storeCommentUrl = @json(route('issues.comments.store', $issue));
+            const commentForm = document.getElementById('comment-form');
+            const commentsList = document.getElementById('comments-list');
+            const commentAlert = document.getElementById('comment-alert');
+            const authorNameInput = document.getElementById('author_name');
+            const bodyInput = document.getElementById('body');
+            const authorNameError = document.getElementById('author-name-error');
+            const bodyError = document.getElementById('body-error');
+            const commentsPrev = document.getElementById('comments-prev');
+            const commentsNext = document.getElementById('comments-next');
+            const commentsPageInfo = document.getElementById('comments-page-info');
+            let nextCommentsUrl = null;
+            let prevCommentsUrl = null;
 
             const showMessage = (message, type = 'success') => {
                 tagAlert.textContent = message;
@@ -174,6 +200,79 @@
                 }
 
                 return data;
+            };
+
+            const showCommentMessage = (message, type = 'success') => {
+                commentAlert.textContent = message;
+                commentAlert.className = `alert alert-${type}`;
+            };
+
+            const clearCommentErrors = () => {
+                authorNameError.textContent = '';
+                bodyError.textContent = '';
+                commentAlert.textContent = '';
+                commentAlert.className = 'alert d-none';
+            };
+
+            const renderComment = (comment) => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item px-0';
+                item.dataset.commentId = comment.id;
+
+                const header = document.createElement('div');
+                header.className = 'd-flex justify-content-between gap-3';
+
+                const author = document.createElement('strong');
+                author.textContent = comment.author_name;
+
+                const date = document.createElement('span');
+                date.className = 'small text-muted';
+                date.textContent = comment.created_at_human;
+
+                const body = document.createElement('p');
+                body.className = 'mb-0 mt-1';
+                body.textContent = comment.body;
+
+                header.append(author, date);
+                item.append(header, body);
+
+                return item;
+            };
+
+            const renderComments = (comments) => {
+                commentsList.innerHTML = '';
+
+                if (!comments.length) {
+                    commentsList.innerHTML = '<div class="text-muted py-3">No comments yet.</div>';
+                    return;
+                }
+
+                comments.forEach((comment) => {
+                    commentsList.appendChild(renderComment(comment));
+                });
+            };
+
+            const updateCommentsPagination = (pagination) => {
+                nextCommentsUrl = pagination.next_page_url;
+                prevCommentsUrl = pagination.prev_page_url;
+                commentsPrev.disabled = !prevCommentsUrl;
+                commentsNext.disabled = !nextCommentsUrl;
+                commentsPageInfo.textContent = `Page ${pagination.current_page} of ${pagination.last_page}`;
+            };
+
+            const loadComments = async (url = commentsUrl) => {
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+                    const data = await handleJsonResponse(response);
+                    renderComments(data.comments);
+                    updateCommentsPagination(data.pagination);
+                } catch (error) {
+                    showCommentMessage(error.message, 'danger');
+                }
             };
 
             form.addEventListener('submit', async (event) => {
@@ -228,6 +327,62 @@
                     showMessage(error.message, 'danger');
                 }
             });
+
+            commentForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                clearCommentErrors();
+
+                try {
+                    const response = await fetch(storeCommentUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({
+                            author_name: authorNameInput.value,
+                            body: bodyInput.value,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        if (data.errors) {
+                            authorNameError.textContent = data.errors.author_name ? data.errors.author_name[0] : '';
+                            bodyError.textContent = data.errors.body ? data.errors.body[0] : '';
+                        }
+
+                        throw new Error(data.message || 'Could not create comment.');
+                    }
+
+                    const emptyState = commentsList.querySelector('.text-muted');
+                    if (emptyState) {
+                        commentsList.innerHTML = '';
+                    }
+
+                    commentsList.prepend(renderComment(data.comment));
+                    bodyInput.value = '';
+                    showCommentMessage(data.message);
+                } catch (error) {
+                    showCommentMessage(error.message, 'danger');
+                }
+            });
+
+            commentsPrev.addEventListener('click', () => {
+                if (prevCommentsUrl) {
+                    loadComments(prevCommentsUrl);
+                }
+            });
+
+            commentsNext.addEventListener('click', () => {
+                if (nextCommentsUrl) {
+                    loadComments(nextCommentsUrl);
+                }
+            });
+
+            loadComments();
         });
     </script>
 </x-app-layout>

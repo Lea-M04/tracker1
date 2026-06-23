@@ -46,11 +46,6 @@
 
                             <form id="comment-form" class="mb-4">
                                 <div class="row g-3">
-                                    <div class="col-md-5">
-                                        <label for="author_name" class="form-label">Author Name</label>
-                                        <input type="text" name="author_name" id="author_name" class="form-control" value="{{ auth()->user()->name }}" required>
-                                        <div id="author-name-error" class="text-danger small mt-1"></div>
-                                    </div>
                                     <div class="col-12">
                                         <label for="body" class="form-label">Comment</label>
                                         <textarea name="body" id="body" rows="3" class="form-control" required></textarea>
@@ -142,9 +137,7 @@
             const commentForm = document.getElementById('comment-form');
             const commentsList = document.getElementById('comments-list');
             const commentAlert = document.getElementById('comment-alert');
-            const authorNameInput = document.getElementById('author_name');
             const bodyInput = document.getElementById('body');
-            const authorNameError = document.getElementById('author-name-error');
             const bodyError = document.getElementById('body-error');
             const commentsPrev = document.getElementById('comments-prev');
             const commentsNext = document.getElementById('comments-next');
@@ -208,7 +201,6 @@
             };
 
             const clearCommentErrors = () => {
-                authorNameError.textContent = '';
                 bodyError.textContent = '';
                 commentAlert.textContent = '';
                 commentAlert.className = 'alert d-none';
@@ -341,7 +333,6 @@
                             'X-CSRF-TOKEN': csrfToken,
                         },
                         body: JSON.stringify({
-                            author_name: authorNameInput.value,
                             body: bodyInput.value,
                         }),
                     });
@@ -350,7 +341,6 @@
 
                     if (!response.ok) {
                         if (data.errors) {
-                            authorNameError.textContent = data.errors.author_name ? data.errors.author_name[0] : '';
                             bodyError.textContent = data.errors.body ? data.errors.body[0] : '';
                         }
 

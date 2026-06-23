@@ -1,8 +1,9 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TagController;
 use Illuminate\Support\Facades\Route;
@@ -18,14 +19,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware('auth')->group(function () {
     Route::get('/', function () {
         return redirect()->route('dashboard');
     })->name('home');
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('projects', ProjectController::class);
     Route::get('/issues/{issue}/comments', [CommentController::class, 'index'])->name('issues.comments.index');

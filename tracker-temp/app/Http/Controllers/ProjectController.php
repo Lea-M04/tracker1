@@ -22,6 +22,7 @@ class ProjectController extends Controller
         $projects = Project::query()
             ->with('user')
             ->withCount('issues')
+            ->where('user_id', auth()->id())
             ->latest()
             ->paginate(10);
 
@@ -88,5 +89,4 @@ class ProjectController extends Controller
             ->route('projects.index')
             ->with('success', 'Project deleted successfully.');
     }
-
 }

@@ -16,7 +16,7 @@ class CommentController extends Controller
 
     public function index(Issue $issue): JsonResponse
     {
-        $this->authorizeIssueAccess($issue);
+        $this->authorize('view', $issue);
 
         $comments = $issue->comments()
             ->latest()
@@ -38,21 +38,17 @@ class CommentController extends Controller
 
     public function store(StoreCommentRequest $request, Issue $issue): JsonResponse
     {
-        $this->authorizeIssueAccess($issue);
+        $this->authorize('view', $issue);
 
-        $comment = $issue->comments()->create($request->validated());
+        $comment = $issue->comments()->create([
+            'author_name' => $request->user()->name,
+            'body' => $request->validated('body'),
+        ]);
 
         return response()->json([
             'message' => 'Comment created successfully.',
             'comment' => $this->formatComment($comment),
         ], 201);
-    }
-
-    private function authorizeIssueAccess(Issue $issue): void
-    {
-        $issue->loadMissing('project');
-
-        abort_unless($issue->project->user_id === auth()->id(), 403);
     }
 
     private function formatComment(Comment $comment): array
